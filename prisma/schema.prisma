@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  name              String
+  username          String   @unique
+  password          String
+  role              String   @default("ADMINISTRATIVE")
+  mustChangePassword Boolean @default(true)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  @@map("users")
+}
+
+model Enrollment {
+  id          String   @id @default(uuid())
+  studentName String
+  course      String
+  classCode   String // Turma
+  hub         String // Polo
+  saleDate    DateTime
+  fullValue   Float // Valor Integral (SQLite não suporta Decimal, usando Float)
+  status      String @default("PENDENTE")
+
+  // --- FINANCEIRO ---
+  contractValue      Float?
+  commissionValue    Float?
+  dueDate            DateTime?
+  installments       Int?
+  installmentValue   Float?
+  discountValue      Float?
+  discountAuthorized Boolean?
+  registrationFee    Float?
+  leadOrigin         String? // Enum no código: EVENTOS, SITE, ETC
+
+  // --- COMERCIAL ---
+  isDisabledPerson       Boolean?
+  hasMobilityRestriction Boolean?
+  mobilityDetails        String?
+  foodRestrictions       String?
+  shirtSize              String?
+  pantsSize              String?
+  postSaleStatus         String? // PENDENTE, REALIZADO
+  contractSignedStatus   String?
+  studentStatus          String?
+  classStatus            String?
+  boletoEmissionStatus   String?
+  boletosGenerated       Boolean?
+  portalAccess           Boolean?
+
+  // --- JURÍDICO (Documentos) ---
+  // Status: PENDENTE, ENTREGUE, APROVADO, REJEITADO
+  docRg            String?
+  docCpf           String?
+  docDiploma       String?
+  docHistory       String?
+  docBirthCert     String?
+  docAddressProof  String?
+  docCrmv          String?
+  docProfilePic    String?
+  docMecCert       String?
+  docFacultyIssuer String?
+  
+  isTransfer          Boolean?
+  generalObservations String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("enrollments")
+}

@@ -6,11 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  // Mudamos para PRISMA_DATABASE_URL (que é o nome que está na Vercel)
-  url       = env("PRISMA_DATABASE_URL") 
-  // Mudamos para POSTGRES_URL (que é o nome da conexão direta na Vercel)
-  directUrl = env("POSTGRES_URL")
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL") // Uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // Uses direct connection
 }
 
 model User {

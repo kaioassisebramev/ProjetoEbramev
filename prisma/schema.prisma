@@ -6,8 +6,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Mudamos para PRISMA_DATABASE_URL (que é o nome que está na Vercel)
+  url       = env("PRISMA_DATABASE_URL") 
+  // Mudamos para POSTGRES_URL (que é o nome da conexão direta na Vercel)
+  directUrl = env("POSTGRES_URL")
 }
 
 model User {

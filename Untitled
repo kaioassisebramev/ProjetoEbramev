@@ -1,6 +1,0 @@
-# NextAuth Configuration (v4)
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=gnAJbv1ZHcsUoKLw27wagUpT7VGYRnHhEEUt07UQGe8=
-
-# Database Configuration
-DATABASE_URL="file:./dev.db"

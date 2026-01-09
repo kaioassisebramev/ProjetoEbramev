@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Método GET para testes - verificar se a rota está online
+export async function GET() {
+  return NextResponse.json({ 
+    status: "Webhook Online", 
+    message: "Use POST para enviar dados" 
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Validação de segurança: verifica o header x-webhook-secret

@@ -2,20 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    // Validação de segurança: verifica o header x-webhook-secret ou authorization
+    // Validação de segurança: verifica o header x-webhook-secret
     const webhookSecret = request.headers.get('x-webhook-secret');
-    const authHeader = request.headers.get('authorization');
     const expectedSecret = process.env.WEBHOOK_SECRET;
 
-    // Extrai o secret do header authorization (pode ser "Bearer TOKEN" ou apenas "TOKEN")
-    const authSecret = authHeader?.startsWith('Bearer ')
-      ? authHeader.replace('Bearer ', '')
-      : authHeader;
-
-    // Verifica se algum dos headers corresponde ao secret esperado
-    const providedSecret = webhookSecret || authSecret;
-
-    if (!providedSecret || providedSecret !== expectedSecret) {
+    if (!webhookSecret || webhookSecret !== expectedSecret) {
       return NextResponse.json(
         { error: 'Não autorizado' },
         { status: 401 }

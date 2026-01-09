@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql" // <--- Mude de "sqlite" para "postgresql"
-  url       = env("POSTGRES_PRISMA_URL") // <--- Use essa variável da Vercel
-  directUrl = env("POSTGRES_URL_NON_POOLING") // <--- Adicione essa linha
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {

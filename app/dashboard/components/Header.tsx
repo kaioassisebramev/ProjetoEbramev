@@ -19,10 +19,8 @@ export function Header({ user }: HeaderProps) {
   const isAdmin = normalizedRole === 'ADMIN';
 
   const navItems = [
-    { label: 'Visão Geral', href: '/dashboard', show: true },
-    { label: 'Financeiro', href: '/dashboard/financial', show: isAdmin || normalizedRole === 'FINANCIAL' },
-    { label: 'Comercial', href: '/dashboard/commercial', show: isAdmin || normalizedRole === 'COMMERCIAL' },
-    { label: 'Jurídico', href: '/dashboard/legal', show: isAdmin || normalizedRole === 'LEGAL' },
+    { label: 'Dashboard', href: '/dashboard', show: true },
+    { label: 'Nova Nota', href: '/dashboard/notas/nova', show: true },
     { label: 'Usuários', href: '/dashboard/users', show: isAdmin },
   ];
 

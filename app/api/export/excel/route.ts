@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
 import { exportExcelSchema } from '@/lib/schemas/notaFiscal';
 
+export const dynamic = 'force-dynamic';
+
 // GET - Exportar notas fiscais para Excel
 export async function GET(request: NextRequest) {
   try {

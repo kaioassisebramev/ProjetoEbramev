@@ -27,70 +27,78 @@ interface PageProps {
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
-  const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession(authOptions);
 
-  if (!session) {
-    redirect('/auth/login');
-  }
-
-  // Monta condições de filtro
-  const where: any = {};
-
-  if (searchParams.ano || searchParams.mes) {
-    where.dataEmissao = {};
-    if (searchParams.ano) {
-      const ano = parseInt(searchParams.ano);
-      where.dataEmissao.gte = new Date(`${ano}-01-01`);
-      where.dataEmissao.lt = new Date(`${ano + 1}-01-01`);
+    if (!session) {
+      redirect('/auth/login');
     }
-    if (searchParams.mes && searchParams.ano) {
-      const ano = parseInt(searchParams.ano);
-      const mes = parseInt(searchParams.mes);
-      const mesStr = mes.toString().padStart(2, '0');
-      where.dataEmissao.gte = new Date(`${ano}-${mesStr}-01`);
-      const proximoMes = mes === 12 ? 1 : mes + 1;
-      const proximoAno = mes === 12 ? ano + 1 : ano;
-      const proximoMesStr = proximoMes.toString().padStart(2, '0');
-      where.dataEmissao.lt = new Date(`${proximoAno}-${proximoMesStr}-01`);
+
+    // Monta condições de filtro
+    const where: any = {};
+
+    if (searchParams.ano || searchParams.mes) {
+      where.dataEmissao = {};
+      if (searchParams.ano) {
+        const ano = parseInt(searchParams.ano);
+        if (!isNaN(ano)) {
+          where.dataEmissao.gte = new Date(`${ano}-01-01`);
+          where.dataEmissao.lt = new Date(`${ano + 1}-01-01`);
+        }
+      }
+      if (searchParams.mes && searchParams.ano) {
+        const ano = parseInt(searchParams.ano);
+        const mes = parseInt(searchParams.mes);
+        if (!isNaN(ano) && !isNaN(mes)) {
+          const mesStr = mes.toString().padStart(2, '0');
+          where.dataEmissao.gte = new Date(`${ano}-${mesStr}-01`);
+          const proximoMes = mes === 12 ? 1 : mes + 1;
+          const proximoAno = mes === 12 ? ano + 1 : ano;
+          const proximoMesStr = proximoMes.toString().padStart(2, '0');
+          where.dataEmissao.lt = new Date(`${proximoAno}-${proximoMesStr}-01`);
+        }
+      }
     }
-  }
 
-  if (searchParams.filial) {
-    where.filial = parseInt(searchParams.filial);
-  }
+    if (searchParams.filial) {
+      const filial = parseInt(searchParams.filial);
+      if (!isNaN(filial)) {
+        where.filial = filial;
+      }
+    }
 
-  if (searchParams.pago !== undefined) {
-    where.pago = searchParams.pago === 'true';
-  }
+    if (searchParams.pago !== undefined) {
+      where.pago = searchParams.pago === 'true';
+    }
 
-  if (searchParams.recebimento) {
-    where.recebimento = searchParams.recebimento;
-  }
+    if (searchParams.recebimento) {
+      where.recebimento = searchParams.recebimento;
+    }
 
-  // Busca notas fiscais com filtros
-  const notas = await prisma.notaFiscal.findMany({
-    where,
-    include: {
-      itens: true,
-      arquivos: true,
-    },
-    orderBy: {
-      dataEmissao: 'desc',
-    },
-    take: 100, // Aumentado para 100
-  });
+    // Busca notas fiscais com filtros
+    const notas = await prisma.notaFiscal.findMany({
+      where,
+      include: {
+        itens: true,
+        arquivos: true,
+      },
+      orderBy: {
+        dataEmissao: 'desc',
+      },
+      take: 100,
+    });
 
-  // Calcula valor total de cada nota
-  const notasComTotal: (NotaFiscalCompleta & { valorTotal: number })[] = notas.map((nota) => {
-    const valorTotal = nota.itens.reduce(
-      (sum, item) => sum + Number(item.valorTotal),
-      0
-    );
-    return {
-      ...nota,
-      valorTotal,
-    };
-  });
+    // Calcula valor total de cada nota
+    const notasComTotal: (NotaFiscalCompleta & { valorTotal: number })[] = notas.map((nota) => {
+      const valorTotal = nota.itens.reduce(
+        (sum, item) => sum + Number(item.valorTotal),
+        0
+      );
+      return {
+        ...nota,
+        valorTotal,
+      };
+    });
 
   return (
     <div>
@@ -117,4 +125,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <NotasTable notas={notasComTotal} busca={searchParams.busca} />
     </div>
   );
+  } catch (error) {
+    console.error('Erro ao carregar dashboard:', error);
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-red-800 mb-2">Erro ao carregar dados</h2>
+        <p className="text-red-600">
+          {error instanceof Error ? error.message : 'Erro desconhecido'}
+        </p>
+        <p className="text-sm text-red-500 mt-2">
+          Verifique as variáveis de ambiente e a conexão com o banco de dados.
+        </p>
+      </div>
+    );
+  }
 }

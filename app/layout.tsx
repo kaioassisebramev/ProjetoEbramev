@@ -10,8 +10,11 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Projeto4',
-  description: 'Sistema desenvolvido com Next.js 14',
+  title: 'Sistema EBRAMEV - Notas Fiscais',
+  description: 'Sistema de gerenciamento de notas fiscais EBRAMEV',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({

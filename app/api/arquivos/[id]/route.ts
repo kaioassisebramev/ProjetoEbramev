@@ -45,13 +45,22 @@ export async function DELETE(
 
     // Remove arquivo (Azure Blob ou sistema de arquivos)
     try {
-      if (isBlobStorageConfigured() && arquivo.caminhoUrl.startsWith('https://')) {
+      if (arquivo.caminhoUrl.startsWith('https://')) {
         // É uma URL do Azure Blob Storage
-        await deleteFromBlob(arquivo.caminhoUrl);
+        if (isBlobStorageConfigured()) {
+          await deleteFromBlob(arquivo.caminhoUrl);
+        } else {
+          console.warn('Azure Blob Storage não configurado, não é possível deletar arquivo do blob');
+        }
       } else {
-        // É um arquivo local
-        const filePath = join(process.cwd(), 'public', arquivo.caminhoUrl);
-        await unlink(filePath);
+        // É um arquivo local (apenas em desenvolvimento)
+        const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+        if (!isProduction) {
+          const filePath = join(process.cwd(), 'public', arquivo.caminhoUrl);
+          await unlink(filePath);
+        } else {
+          console.warn('Tentativa de deletar arquivo local em produção (não suportado)');
+        }
       }
     } catch (error) {
       console.warn('Erro ao remover arquivo:', error);

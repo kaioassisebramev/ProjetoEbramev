@@ -80,6 +80,19 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    // Verifica se está em produção (Vercel)
+    const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+    // Em produção, Azure Blob Storage é obrigatório
+    if (isProduction && !isBlobStorageConfigured()) {
+      return NextResponse.json(
+        {
+          error: 'Azure Blob Storage não está configurado. Configure AZURE_STORAGE_CONNECTION_STRING no Vercel.',
+        },
+        { status: 500 }
+      );
+    }
+
     let fileUrl: string;
 
     // Tenta usar Azure Blob Storage se estiver configurado
@@ -90,8 +103,51 @@ export async function POST(request: NextRequest) {
         const fileName = `${codigo}_${timestamp}_${file.name}`;
         fileUrl = await uploadToBlob(buffer, fileName, file.type);
       } catch (blobError) {
-        console.error('Erro ao fazer upload para Azure Blob, usando fallback local:', blobError);
-        // Fallback para armazenamento local
+        console.error('Erro ao fazer upload para Azure Blob:', blobError);
+        
+        // Em produção, não tenta fallback
+        if (isProduction) {
+          return NextResponse.json(
+            {
+              error: `Erro ao fazer upload para Azure Blob Storage: ${blobError instanceof Error ? blobError.message : 'Erro desconhecido'}`,
+            },
+            { status: 500 }
+          );
+        }
+
+        // Em desenvolvimento, tenta fallback local
+        try {
+          const uploadsDir = join(process.cwd(), 'public', 'uploads');
+          if (!existsSync(uploadsDir)) {
+            mkdirSync(uploadsDir, { recursive: true });
+          }
+          const timestamp = Date.now();
+          const fileName = `${codigo}_${timestamp}_${file.name}`;
+          const filePath = join(uploadsDir, fileName);
+          await writeFile(filePath, buffer);
+          fileUrl = `/uploads/${fileName}`;
+        } catch (localError) {
+          return NextResponse.json(
+            {
+              error: `Erro ao fazer upload: ${localError instanceof Error ? localError.message : 'Erro desconhecido'}`,
+            },
+            { status: 500 }
+          );
+        }
+      }
+    } else {
+      // Em desenvolvimento, usa armazenamento local se Azure não estiver configurado
+      if (isProduction) {
+        return NextResponse.json(
+          {
+            error: 'Azure Blob Storage é obrigatório em produção. Configure AZURE_STORAGE_CONNECTION_STRING.',
+          },
+          { status: 500 }
+        );
+      }
+
+      // Fallback local apenas em desenvolvimento
+      try {
         const uploadsDir = join(process.cwd(), 'public', 'uploads');
         if (!existsSync(uploadsDir)) {
           mkdirSync(uploadsDir, { recursive: true });
@@ -101,18 +157,14 @@ export async function POST(request: NextRequest) {
         const filePath = join(uploadsDir, fileName);
         await writeFile(filePath, buffer);
         fileUrl = `/uploads/${fileName}`;
+      } catch (localError) {
+        return NextResponse.json(
+          {
+            error: `Erro ao fazer upload: ${localError instanceof Error ? localError.message : 'Erro desconhecido'}`,
+          },
+          { status: 500 }
+        );
       }
-    } else {
-      // Usa armazenamento local
-      const uploadsDir = join(process.cwd(), 'public', 'uploads');
-      if (!existsSync(uploadsDir)) {
-        mkdirSync(uploadsDir, { recursive: true });
-      }
-      const timestamp = Date.now();
-      const fileName = `${codigo}_${timestamp}_${file.name}`;
-      const filePath = join(uploadsDir, fileName);
-      await writeFile(filePath, buffer);
-      fileUrl = `/uploads/${fileName}`;
     }
 
     // Salva referência no banco

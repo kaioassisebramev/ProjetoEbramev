@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import { uploadToBlob, isBlobStorageConfigured } from '@/lib/azureBlob';
 
 // POST - Upload de arquivo PDF
 export async function POST(request: NextRequest) {
@@ -75,24 +76,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cria diretório de uploads se não existir
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadsDir)) {
-      mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    // Gera nome único para o arquivo
-    const timestamp = Date.now();
-    const fileName = `${codigo}_${timestamp}_${file.name}`;
-    const filePath = join(uploadsDir, fileName);
-
-    // Salva arquivo
+    // Converte arquivo para buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
 
-    // URL do arquivo
-    const fileUrl = `/uploads/${fileName}`;
+    let fileUrl: string;
+
+    // Tenta usar Azure Blob Storage se estiver configurado
+    if (isBlobStorageConfigured()) {
+      try {
+        // Upload para Azure Blob Storage
+        const timestamp = Date.now();
+        const fileName = `${codigo}_${timestamp}_${file.name}`;
+        fileUrl = await uploadToBlob(buffer, fileName, file.type);
+      } catch (blobError) {
+        console.error('Erro ao fazer upload para Azure Blob, usando fallback local:', blobError);
+        // Fallback para armazenamento local
+        const uploadsDir = join(process.cwd(), 'public', 'uploads');
+        if (!existsSync(uploadsDir)) {
+          mkdirSync(uploadsDir, { recursive: true });
+        }
+        const timestamp = Date.now();
+        const fileName = `${codigo}_${timestamp}_${file.name}`;
+        const filePath = join(uploadsDir, fileName);
+        await writeFile(filePath, buffer);
+        fileUrl = `/uploads/${fileName}`;
+      }
+    } else {
+      // Usa armazenamento local
+      const uploadsDir = join(process.cwd(), 'public', 'uploads');
+      if (!existsSync(uploadsDir)) {
+        mkdirSync(uploadsDir, { recursive: true });
+      }
+      const timestamp = Date.now();
+      const fileName = `${codigo}_${timestamp}_${file.name}`;
+      const filePath = join(uploadsDir, fileName);
+      await writeFile(filePath, buffer);
+      fileUrl = `/uploads/${fileName}`;
+    }
 
     // Salva referência no banco
     const arquivo = await prisma.arquivo.create({

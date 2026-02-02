@@ -148,12 +148,12 @@ export function FilesManager({ notaFiscalId, initialArquivos }: FilesManagerProp
               </div>
               <div className="flex items-center gap-2">
                 <a
-                  href={arquivo.caminhoUrl}
+                  href={arquivo.caminhoUrl.startsWith('http') ? arquivo.caminhoUrl : arquivo.caminhoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md transition-colors"
                 >
-                  Download
+                  {arquivo.caminhoUrl.startsWith('https://') ? 'Abrir no Blob' : 'Download'}
                 </a>
                 <button
                   onClick={() => handleDelete(arquivo.id)}

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
+import { deleteFromBlob, isBlobStorageConfigured } from '@/lib/azureBlob';
 
 // DELETE - Excluir arquivo
 export async function DELETE(
@@ -42,13 +43,19 @@ export async function DELETE(
       );
     }
 
-    // Remove arquivo do sistema de arquivos
+    // Remove arquivo (Azure Blob ou sistema de arquivos)
     try {
-      const filePath = join(process.cwd(), 'public', arquivo.caminhoUrl);
-      await unlink(filePath);
+      if (isBlobStorageConfigured() && arquivo.caminhoUrl.startsWith('https://')) {
+        // É uma URL do Azure Blob Storage
+        await deleteFromBlob(arquivo.caminhoUrl);
+      } else {
+        // É um arquivo local
+        const filePath = join(process.cwd(), 'public', arquivo.caminhoUrl);
+        await unlink(filePath);
+      }
     } catch (error) {
-      console.warn('Erro ao remover arquivo do sistema:', error);
-      // Continua mesmo se o arquivo não existir no sistema
+      console.warn('Erro ao remover arquivo:', error);
+      // Continua mesmo se o arquivo não existir
     }
 
     // Remove do banco

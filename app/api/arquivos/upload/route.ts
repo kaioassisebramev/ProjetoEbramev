@@ -6,6 +6,7 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { uploadToBlob, isBlobStorageConfigured } from '@/lib/azureBlob';
+import { uploadToVercelBlob, isVercelBlobConfigured } from '@/lib/vercelBlob';
 
 // POST - Upload de arquivo PDF
 export async function POST(request: NextRequest) {
@@ -83,39 +84,51 @@ export async function POST(request: NextRequest) {
     // Verifica se está em produção (Vercel)
     const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
 
-    // Em produção, Azure Blob Storage é obrigatório
-    if (isProduction && !isBlobStorageConfigured()) {
-      return NextResponse.json(
-        {
-          error: 'Azure Blob Storage não está configurado. Configure AZURE_STORAGE_CONNECTION_STRING no Vercel.',
-        },
-        { status: 500 }
-      );
-    }
+    let fileUrl: string | undefined;
 
-    let fileUrl: string;
-
-    // Tenta usar Azure Blob Storage se estiver configurado
-    if (isBlobStorageConfigured()) {
+    // Prioridade 1: Vercel Blob Storage (mais simples e nativo)
+    if (isVercelBlobConfigured()) {
       try {
-        // Upload para Azure Blob Storage
+        const timestamp = Date.now();
+        const fileName = `nota-${codigo}/${timestamp}_${file.name}`;
+        fileUrl = await uploadToVercelBlob(buffer, fileName, file.type);
+      } catch (vercelBlobError) {
+        console.error('Erro ao fazer upload para Vercel Blob:', vercelBlobError);
+        
+        // Em produção, não tenta fallback
+        if (isProduction) {
+          return NextResponse.json(
+            {
+              error: `Erro ao fazer upload para Vercel Blob Storage: ${vercelBlobError instanceof Error ? vercelBlobError.message : 'Erro desconhecido'}`,
+            },
+            { status: 500 }
+          );
+        }
+
+        // Em desenvolvimento, tenta Azure ou local
+        // Continua para o próximo fallback abaixo
+      }
+    }
+    
+    // Prioridade 2: Azure Blob Storage (se Vercel Blob não estiver configurado ou falhou)
+    if (!fileUrl && isBlobStorageConfigured()) {
+      try {
         const timestamp = Date.now();
         const fileName = `${codigo}_${timestamp}_${file.name}`;
         fileUrl = await uploadToBlob(buffer, fileName, file.type);
       } catch (blobError) {
         console.error('Erro ao fazer upload para Azure Blob:', blobError);
         
-        // Em produção, não tenta fallback
         if (isProduction) {
           return NextResponse.json(
             {
-              error: `Erro ao fazer upload para Azure Blob Storage: ${blobError instanceof Error ? blobError.message : 'Erro desconhecido'}`,
+              error: `Erro ao fazer upload: ${blobError instanceof Error ? blobError.message : 'Erro desconhecido'}`,
             },
             { status: 500 }
           );
         }
 
-        // Em desenvolvimento, tenta fallback local
+        // Fallback local apenas em desenvolvimento
         try {
           const uploadsDir = join(process.cwd(), 'public', 'uploads');
           if (!existsSync(uploadsDir)) {
@@ -135,12 +148,14 @@ export async function POST(request: NextRequest) {
           );
         }
       }
-    } else {
-      // Em desenvolvimento, usa armazenamento local se Azure não estiver configurado
+    }
+    
+    // Prioridade 3: Armazenamento local (apenas em desenvolvimento)
+    if (fileUrl === undefined) {
       if (isProduction) {
         return NextResponse.json(
           {
-            error: 'Azure Blob Storage é obrigatório em produção. Configure AZURE_STORAGE_CONNECTION_STRING.',
+            error: 'Configure BLOB_READ_WRITE_TOKEN ou AZURE_STORAGE_CONNECTION_STRING no Vercel.',
           },
           { status: 500 }
         );
@@ -165,6 +180,16 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+    }
+
+    // Garante que fileUrl foi definido
+    if (!fileUrl) {
+      return NextResponse.json(
+        {
+          error: 'Erro ao fazer upload: nenhum método de armazenamento funcionou',
+        },
+        { status: 500 }
+      );
     }
 
     // Salva referência no banco

@@ -17,6 +17,7 @@
     "@azure/storage-blob": "^12.30.0",
     "@hookform/resolvers": "^3.3.4",
     "@prisma/client": "^5.19.1",
+    "@vercel/blob": "^2.0.1",
     "bcryptjs": "^2.4.3",
     "next": "^14.2.5",
     "next-auth": "^4.24.7",

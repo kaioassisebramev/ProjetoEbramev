@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { deleteFromBlob, isBlobStorageConfigured } from '@/lib/azureBlob';
+import { deleteFromVercelBlob, isVercelBlobConfigured } from '@/lib/vercelBlob';
 
 // DELETE - Excluir arquivo
 export async function DELETE(
@@ -43,14 +44,18 @@ export async function DELETE(
       );
     }
 
-    // Remove arquivo (Azure Blob ou sistema de arquivos)
+    // Remove arquivo (Vercel Blob, Azure Blob ou sistema de arquivos)
     try {
       if (arquivo.caminhoUrl.startsWith('https://')) {
-        // É uma URL do Azure Blob Storage
-        if (isBlobStorageConfigured()) {
+        // É uma URL de blob storage
+        if (isVercelBlobConfigured() && arquivo.caminhoUrl.includes('blob.vercel-storage.com')) {
+          // É Vercel Blob Storage
+          await deleteFromVercelBlob(arquivo.caminhoUrl);
+        } else if (isBlobStorageConfigured()) {
+          // É Azure Blob Storage
           await deleteFromBlob(arquivo.caminhoUrl);
         } else {
-          console.warn('Azure Blob Storage não configurado, não é possível deletar arquivo do blob');
+          console.warn('Blob Storage não configurado, não é possível deletar arquivo do blob');
         }
       } else {
         // É um arquivo local (apenas em desenvolvimento)

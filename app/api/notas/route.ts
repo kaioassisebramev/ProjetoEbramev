@@ -141,11 +141,27 @@ export async function POST(request: NextRequest) {
     // Converte datas (aceita YYYY-MM-DD ou ISO datetime)
     const dataEmissao = validatedData.dataEmissao instanceof Date
       ? validatedData.dataEmissao
-      : new Date(validatedData.dataEmissao + (validatedData.dataEmissao.includes('T') ? '' : 'T00:00:00.000Z'));
+      : (() => {
+          const dateStr = validatedData.dataEmissao as string;
+          if (dateStr.includes('T')) {
+            return new Date(dateStr);
+          }
+          // Usa meio-dia local para evitar problemas de timezone
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day, 12, 0, 0);
+        })();
     
     const dataVencimento = validatedData.dataVencimento instanceof Date
       ? validatedData.dataVencimento
-      : new Date(validatedData.dataVencimento + (validatedData.dataVencimento.includes('T') ? '' : 'T00:00:00.000Z'));
+      : (() => {
+          const dateStr = validatedData.dataVencimento as string;
+          if (dateStr.includes('T')) {
+            return new Date(dateStr);
+          }
+          // Usa meio-dia local para evitar problemas de timezone
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day, 12, 0, 0);
+        })();
 
     // Valida se as datas são válidas
     if (isNaN(dataEmissao.getTime())) {

@@ -124,7 +124,15 @@ export async function PATCH(
     if (validatedData.dataEmissao !== undefined) {
       const dataEmissao = validatedData.dataEmissao instanceof Date
         ? validatedData.dataEmissao
-        : new Date(validatedData.dataEmissao + (typeof validatedData.dataEmissao === 'string' && !validatedData.dataEmissao.includes('T') ? 'T00:00:00.000Z' : ''));
+        : (() => {
+            const dateStr = validatedData.dataEmissao as string;
+            if (dateStr.includes('T')) {
+              return new Date(dateStr);
+            }
+            // Usa meio-dia local para evitar problemas de timezone
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day, 12, 0, 0);
+          })();
       
       if (isNaN(dataEmissao.getTime())) {
         return NextResponse.json(
@@ -138,7 +146,15 @@ export async function PATCH(
     if (validatedData.dataVencimento !== undefined) {
       const dataVencimento = validatedData.dataVencimento instanceof Date
         ? validatedData.dataVencimento
-        : new Date(validatedData.dataVencimento + (typeof validatedData.dataVencimento === 'string' && !validatedData.dataVencimento.includes('T') ? 'T00:00:00.000Z' : ''));
+        : (() => {
+            const dateStr = validatedData.dataVencimento as string;
+            if (dateStr.includes('T')) {
+              return new Date(dateStr);
+            }
+            // Usa meio-dia local para evitar problemas de timezone
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day, 12, 0, 0);
+          })();
       
       if (isNaN(dataVencimento.getTime())) {
         return NextResponse.json(

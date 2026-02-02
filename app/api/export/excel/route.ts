@@ -41,11 +41,27 @@ export async function GET(request: NextRequest) {
     // Converte datas (aceita YYYY-MM-DD ou ISO datetime)
     const inicio = validatedData.dataInicial instanceof Date
       ? validatedData.dataInicial
-      : new Date(validatedData.dataInicial + (validatedData.dataInicial.includes('T') ? '' : 'T00:00:00.000Z'));
+      : (() => {
+          const dateStr = validatedData.dataInicial as string;
+          if (dateStr.includes('T')) {
+            return new Date(dateStr);
+          }
+          // Usa início do dia local para evitar problemas de timezone
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day, 0, 0, 0);
+        })();
     
     const fim = validatedData.dataFinal instanceof Date
       ? validatedData.dataFinal
-      : new Date(validatedData.dataFinal + (validatedData.dataFinal.includes('T') ? '' : 'T23:59:59.999Z'));
+      : (() => {
+          const dateStr = validatedData.dataFinal as string;
+          if (dateStr.includes('T')) {
+            return new Date(dateStr);
+          }
+          // Usa fim do dia local para evitar problemas de timezone
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day, 23, 59, 59);
+        })();
 
     // Valida se as datas são válidas
     if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) {

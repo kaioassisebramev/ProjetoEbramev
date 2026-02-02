@@ -38,8 +38,22 @@ export async function GET(request: NextRequest) {
       dataFinal,
     });
 
-    const inicio = new Date(validatedData.dataInicial);
-    const fim = new Date(validatedData.dataFinal);
+    // Converte datas (aceita YYYY-MM-DD ou ISO datetime)
+    const inicio = validatedData.dataInicial instanceof Date
+      ? validatedData.dataInicial
+      : new Date(validatedData.dataInicial + (validatedData.dataInicial.includes('T') ? '' : 'T00:00:00.000Z'));
+    
+    const fim = validatedData.dataFinal instanceof Date
+      ? validatedData.dataFinal
+      : new Date(validatedData.dataFinal + (validatedData.dataFinal.includes('T') ? '' : 'T23:59:59.999Z'));
+
+    // Valida se as datas são válidas
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) {
+      return NextResponse.json(
+        { error: 'Datas inválidas' },
+        { status: 400 }
+      );
+    }
 
     // Busca notas no período
     const notas = await prisma.notaFiscal.findMany({

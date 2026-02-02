@@ -112,22 +112,47 @@ export async function PATCH(
       );
     }
 
-    // Converte datas
-    const dataEmissao = new Date(validatedData.dataEmissao);
-    const dataVencimento = new Date(validatedData.dataVencimento);
+    // Converte datas (aceita YYYY-MM-DD ou ISO datetime)
+    const updateData: any = {};
+    
+    if (validatedData.filial !== undefined) updateData.filial = validatedData.filial;
+    if (validatedData.empresa !== undefined) updateData.empresa = validatedData.empresa;
+    if (validatedData.cnpj !== undefined) updateData.cnpj = validatedData.cnpj;
+    if (validatedData.recebimento !== undefined) updateData.recebimento = validatedData.recebimento;
+    if (validatedData.pago !== undefined) updateData.pago = validatedData.pago;
+
+    if (validatedData.dataEmissao !== undefined) {
+      const dataEmissao = validatedData.dataEmissao instanceof Date
+        ? validatedData.dataEmissao
+        : new Date(validatedData.dataEmissao + (typeof validatedData.dataEmissao === 'string' && !validatedData.dataEmissao.includes('T') ? 'T00:00:00.000Z' : ''));
+      
+      if (isNaN(dataEmissao.getTime())) {
+        return NextResponse.json(
+          { error: 'Data de emissão inválida' },
+          { status: 400 }
+        );
+      }
+      updateData.dataEmissao = dataEmissao;
+    }
+
+    if (validatedData.dataVencimento !== undefined) {
+      const dataVencimento = validatedData.dataVencimento instanceof Date
+        ? validatedData.dataVencimento
+        : new Date(validatedData.dataVencimento + (typeof validatedData.dataVencimento === 'string' && !validatedData.dataVencimento.includes('T') ? 'T00:00:00.000Z' : ''));
+      
+      if (isNaN(dataVencimento.getTime())) {
+        return NextResponse.json(
+          { error: 'Data de vencimento inválida' },
+          { status: 400 }
+        );
+      }
+      updateData.dataVencimento = dataVencimento;
+    }
 
     // Atualiza nota fiscal
     const notaFiscal = await prisma.notaFiscal.update({
       where: { codigo },
-      data: {
-        filial: validatedData.filial,
-        empresa: validatedData.empresa,
-        cnpj: validatedData.cnpj,
-        dataEmissao,
-        dataVencimento,
-        recebimento: validatedData.recebimento,
-        pago: validatedData.pago,
-      },
+      data: updateData,
       include: {
         itens: true,
         arquivos: true,

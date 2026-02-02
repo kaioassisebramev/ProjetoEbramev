@@ -138,9 +138,29 @@ export async function POST(request: NextRequest) {
     // Valida dados
     const validatedData = notaFiscalSchema.parse(body);
 
-    // Converte datas
-    const dataEmissao = new Date(validatedData.dataEmissao);
-    const dataVencimento = new Date(validatedData.dataVencimento);
+    // Converte datas (aceita YYYY-MM-DD ou ISO datetime)
+    const dataEmissao = validatedData.dataEmissao instanceof Date
+      ? validatedData.dataEmissao
+      : new Date(validatedData.dataEmissao + (validatedData.dataEmissao.includes('T') ? '' : 'T00:00:00.000Z'));
+    
+    const dataVencimento = validatedData.dataVencimento instanceof Date
+      ? validatedData.dataVencimento
+      : new Date(validatedData.dataVencimento + (validatedData.dataVencimento.includes('T') ? '' : 'T00:00:00.000Z'));
+
+    // Valida se as datas são válidas
+    if (isNaN(dataEmissao.getTime())) {
+      return NextResponse.json(
+        { error: 'Data de emissão inválida' },
+        { status: 400 }
+      );
+    }
+
+    if (isNaN(dataVencimento.getTime())) {
+      return NextResponse.json(
+        { error: 'Data de vencimento inválida' },
+        { status: 400 }
+      );
+    }
 
     // Cria nota fiscal
     const notaFiscal = await prisma.notaFiscal.create({

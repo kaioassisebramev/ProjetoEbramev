@@ -11,6 +11,9 @@ datasource db {
   directUrl = env("POSTGRES_URL")
 }
 
+// ========================================
+// USUÁRIOS (mantém compatibilidade com NextAuth)
+// ========================================
 model User {
   id                String   @id @default(uuid())
   name              String
@@ -20,64 +23,87 @@ model User {
   mustChangePassword Boolean @default(true)
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@map("users")
 }
 
-model Enrollment {
-  id          String   @id @default(uuid())
-  studentName String
-  course      String
-  classCode   String // Turma
-  hub         String // Polo
-  saleDate    DateTime
-  fullValue   Float // Valor Integral (SQLite não suporta Decimal, usando Float)
-  status      String @default("PENDENTE")
+// ========================================
+// ENUM: TIPO DE RECEBIMENTO
+// ========================================
+enum TipoRecebimento {
+  FISICO
+  EMAIL
+  WHATSAPP
+}
 
-  // --- FINANCEIRO ---
-  contractValue      Float?
-  commissionValue    Float?
-  dueDate            DateTime?
-  installments       Int?
-  installmentValue   Float?
-  discountValue      Float?
-  discountAuthorized Boolean?
-  registrationFee    Float?
-  leadOrigin         String? // Enum no código: EVENTOS, SITE, ETC
+// ========================================
+// NOTAS FISCAIS
+// ========================================
+model NotaFiscal {
+  codigo          Int              @id @default(autoincrement())
+  filial          Int              // 1 ou 2
+  empresa         String
+  cnpj            String
+  dataEmissao     DateTime
+  dataVencimento  DateTime
+  recebimento     TipoRecebimento
+  pago            Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  // --- COMERCIAL ---
-  isDisabledPerson       Boolean?
-  hasMobilityRestriction Boolean?
-  mobilityDetails        String?
-  foodRestrictions       String?
-  shirtSize              String?
-  pantsSize              String?
-  postSaleStatus         String? // PENDENTE, REALIZADO
-  contractSignedStatus   String?
-  studentStatus          String?
-  classStatus            String?
-  boletoEmissionStatus   String?
-  boletosGenerated       Boolean?
-  portalAccess           Boolean?
+  // Relacionamentos
+  itens           ItemNota[]
+  arquivos        Arquivo[]
 
-  // --- JURÍDICO (Documentos) ---
-  // Status: PENDENTE, ENTREGUE, APROVADO, REJEITADO
-  docRg            String?
-  docCpf           String?
-  docDiploma       String?
-  docHistory       String?
-  docBirthCert     String?
-  docAddressProof  String?
-  docCrmv          String?
-  docProfilePic    String?
-  docMecCert       String?
-  docFacultyIssuer String?
-  
-  isTransfer          Boolean?
-  generalObservations String?
+  @@map("notas_fiscais")
+}
 
+// ========================================
+// ITENS DA NOTA
+// ========================================
+model ItemNota {
+  id              Int      @id @default(autoincrement())
+  descricao       String
+  unidadeMedida   String   // UN, KG, etc.
+  quantidade      Decimal  @db.Decimal(10, 2)
+  valorUnitario   Decimal  @db.Decimal(10, 2)
+  valorTotal      Decimal  @db.Decimal(12, 2)
+  ncm             String?
+  icms            String?
+  categoria       String?
+  notaFiscalId    Int
+
+  notaFiscal      NotaFiscal @relation(fields: [notaFiscalId], references: [codigo], onDelete: Cascade)
+
+  @@map("itens_nota")
+}
+
+// ========================================
+// ARQUIVOS PDF
+// ========================================
+model Arquivo {
+  id            Int      @id @default(autoincrement())
+  nomeArquivo   String
+  caminhoUrl    String
+  tipo          String   // MIME type
+  tamanho       Int      // bytes
+  notaFiscalId  Int
+  createdAt     DateTime @default(now())
+
+  notaFiscal    NotaFiscal @relation(fields: [notaFiscalId], references: [codigo], onDelete: Cascade)
+
+  @@map("arquivos")
+}
+
+// ========================================
+// UNIDADES DE MEDIDA
+// ========================================
+model UnidadeMedida {
+  id        Int      @id @default(autoincrement())
+  sigla     String   @unique
+  descricao String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@map("enrollments")
+  @@map("unidades_medida")
 }

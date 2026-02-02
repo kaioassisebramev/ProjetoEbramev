@@ -175,6 +175,26 @@ export function NotaForm({ nota, mode }: NotaFormProps) {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor Total (R$)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('valorTotal', { valueAsNumber: true })}
+              placeholder="0.00"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Opcional: O valor será calculado automaticamente pela soma dos itens
+            </p>
+            {errors.valorTotal && (
+              <p className="mt-1 text-sm text-red-600">{errors.valorTotal.message}</p>
+            )}
+          </div>
+
           <div className="flex items-center">
             <input
               type="checkbox"

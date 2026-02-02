@@ -31,6 +31,7 @@ export const notaFiscalSchema = z.object({
     .or(z.date()),
   recebimento: z.enum(['FISICO', 'EMAIL', 'WHATSAPP']),
   pago: z.boolean().default(false),
+  valorTotal: z.number().min(0, 'Valor total não pode ser negativo').optional(),
 });
 
 export type NotaFiscalFormData = z.infer<typeof notaFiscalSchema>;

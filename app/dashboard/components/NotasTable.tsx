@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { NotaFiscal, ItemNota, Arquivo } from '@prisma/client';
@@ -15,11 +15,24 @@ type NotaFiscalCompleta = NotaFiscal & {
 
 interface NotasTableProps {
   notas: NotaFiscalCompleta[];
+  busca?: string;
 }
 
-export function NotasTable({ notas }: NotasTableProps) {
+export function NotasTable({ notas, busca = '' }: NotasTableProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Filtra notas por busca (empresa ou CNPJ)
+  const notasFiltradas = useMemo(() => {
+    if (!busca.trim()) return notas;
+
+    const termo = busca.toLowerCase().trim();
+    return notas.filter(
+      (nota) =>
+        nota.empresa.toLowerCase().includes(termo) ||
+        nota.cnpj.toLowerCase().includes(termo)
+    );
+  }, [notas, busca]);
 
   const handleDelete = async (codigo: number) => {
     if (!confirm('Tem certeza que deseja excluir esta nota fiscal?')) {
@@ -87,7 +100,7 @@ export function NotasTable({ notas }: NotasTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {notas.length === 0 ? (
+            {notasFiltradas.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center">
@@ -114,7 +127,7 @@ export function NotasTable({ notas }: NotasTableProps) {
                 </td>
               </tr>
             ) : (
-              notas.map((nota) => {
+              notasFiltradas.map((nota) => {
                 const valorTotal =
                   nota.valorTotal ||
                   nota.itens.reduce((sum, item) => sum + Number(item.valorTotal), 0);
@@ -169,9 +182,32 @@ export function NotasTable({ notas }: NotasTableProps) {
                         <button
                           onClick={() => handleDelete(nota.codigo)}
                           disabled={deletingId === nota.codigo}
-                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Excluir nota fiscal"
                         >
-                          {deletingId === nota.codigo ? 'Excluindo...' : 'Excluir'}
+                          {deletingId === nota.codigo ? (
+                            <span className="flex items-center gap-1">
+                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                  fill="none"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                />
+                              </svg>
+                              Excluindo...
+                            </span>
+                          ) : (
+                            'Excluir'
+                          )}
                         </button>
                       </div>
                     </td>

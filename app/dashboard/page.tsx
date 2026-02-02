@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { NotasTable } from './components/NotasTable';
+import { FiltrosNotas } from './components/FiltrosNotas';
+import { ExportExcelButton } from './components/ExportExcelButton';
 import { NotaFiscal, ItemNota, Arquivo } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -13,15 +15,61 @@ type NotaFiscalCompleta = NotaFiscal & {
   arquivos: Arquivo[];
 };
 
-export default async function DashboardPage() {
+interface PageProps {
+  searchParams: {
+    ano?: string;
+    mes?: string;
+    filial?: string;
+    pago?: string;
+    recebimento?: string;
+    busca?: string;
+  };
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
     redirect('/auth/login');
   }
 
-  // Busca todas as notas fiscais
+  // Monta condições de filtro
+  const where: any = {};
+
+  if (searchParams.ano || searchParams.mes) {
+    where.dataEmissao = {};
+    if (searchParams.ano) {
+      const ano = parseInt(searchParams.ano);
+      where.dataEmissao.gte = new Date(`${ano}-01-01`);
+      where.dataEmissao.lt = new Date(`${ano + 1}-01-01`);
+    }
+    if (searchParams.mes && searchParams.ano) {
+      const ano = parseInt(searchParams.ano);
+      const mes = parseInt(searchParams.mes);
+      const mesStr = mes.toString().padStart(2, '0');
+      where.dataEmissao.gte = new Date(`${ano}-${mesStr}-01`);
+      const proximoMes = mes === 12 ? 1 : mes + 1;
+      const proximoAno = mes === 12 ? ano + 1 : ano;
+      const proximoMesStr = proximoMes.toString().padStart(2, '0');
+      where.dataEmissao.lt = new Date(`${proximoAno}-${proximoMesStr}-01`);
+    }
+  }
+
+  if (searchParams.filial) {
+    where.filial = parseInt(searchParams.filial);
+  }
+
+  if (searchParams.pago !== undefined) {
+    where.pago = searchParams.pago === 'true';
+  }
+
+  if (searchParams.recebimento) {
+    where.recebimento = searchParams.recebimento;
+  }
+
+  // Busca notas fiscais com filtros
   const notas = await prisma.notaFiscal.findMany({
+    where,
     include: {
       itens: true,
       arquivos: true,
@@ -29,7 +77,7 @@ export default async function DashboardPage() {
     orderBy: {
       dataEmissao: 'desc',
     },
-    take: 50, // Limita a 50 para performance
+    take: 100, // Aumentado para 100
   });
 
   // Calcula valor total de cada nota
@@ -50,18 +98,23 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Notas Fiscais</h1>
           <p className="text-gray-600 mt-2">
-            Total de {notasComTotal.length} nota(s) cadastrada(s)
+            Total de {notasComTotal.length} nota(s) encontrada(s)
           </p>
         </div>
-        <Link
-          href="/dashboard/notas/nova"
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-        >
-          + Nova Nota
-        </Link>
+        <div className="flex gap-2">
+          <ExportExcelButton />
+          <Link
+            href="/dashboard/notas/nova"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            + Nova Nota
+          </Link>
+        </div>
       </div>
 
-      <NotasTable notas={notasComTotal} />
+      <FiltrosNotas />
+
+      <NotasTable notas={notasComTotal} busca={searchParams.busca} />
     </div>
   );
 }

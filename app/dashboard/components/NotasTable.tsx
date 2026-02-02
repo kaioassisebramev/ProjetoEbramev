@@ -67,6 +67,16 @@ export function NotasTable({ notas, busca = '' }: NotasTableProps) {
     }).format(value);
   };
 
+  // Formata data sem problemas de timezone
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    // Usa UTC para evitar problemas de timezone
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const year = d.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   return (
     <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
       <div className="overflow-x-auto">
@@ -149,12 +159,12 @@ export function NotasTable({ notas, busca = '' }: NotasTableProps) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {new Date(nota.dataEmissao).toLocaleDateString('pt-BR')}
+                        {formatDate(nota.dataEmissao)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {new Date(nota.dataVencimento).toLocaleDateString('pt-BR')}
+                        {formatDate(nota.dataVencimento)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

@@ -8,12 +8,18 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ nota }: StatusBadgeProps) {
   const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
+  // Usa UTC para evitar problemas de timezone
+  const hojeUTC = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate()));
   
   const vencimento = new Date(nota.dataVencimento);
-  vencimento.setHours(0, 0, 0, 0);
+  // Usa UTC para evitar problemas de timezone
+  const vencimentoUTC = new Date(Date.UTC(
+    vencimento.getUTCFullYear(),
+    vencimento.getUTCMonth(),
+    vencimento.getUTCDate()
+  ));
   
-  const diasAteVencimento = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  const diasAteVencimento = Math.ceil((vencimentoUTC.getTime() - hojeUTC.getTime()) / (1000 * 60 * 60 * 24));
 
   let status: 'PAGO' | 'VENCIDA' | 'PROXIMO' | 'AGUARDANDO';
   let cor: string;

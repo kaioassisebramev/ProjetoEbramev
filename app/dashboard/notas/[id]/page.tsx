@@ -54,6 +54,16 @@ export default async function DetalhesNotaPage({ params }: PageProps) {
     }).format(value);
   };
 
+  // Formata data sem problemas de timezone
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    // Usa UTC para evitar problemas de timezone
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const year = d.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   return (
     <div>
       <div className="mb-6 flex justify-between items-start">
@@ -94,13 +104,13 @@ export default async function DetalhesNotaPage({ params }: PageProps) {
           <div>
             <p className="text-sm text-gray-500">Data de Emissão</p>
             <p className="text-lg font-medium text-gray-900">
-              {new Date(notaFiscal.dataEmissao).toLocaleDateString('pt-BR')}
+              {formatDate(notaFiscal.dataEmissao)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Data de Vencimento</p>
             <p className="text-lg font-medium text-gray-900">
-              {new Date(notaFiscal.dataVencimento).toLocaleDateString('pt-BR')}
+              {formatDate(notaFiscal.dataVencimento)}
             </p>
           </div>
           <div>

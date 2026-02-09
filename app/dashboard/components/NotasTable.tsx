@@ -18,21 +18,82 @@ interface NotasTableProps {
   busca?: string;
 }
 
+type SortField = 'codigo' | 'filial' | 'empresa' | 'dataEmissao' | 'dataVencimento' | 'valorTotal';
+type SortDirection = 'asc' | 'desc';
+
 export function NotasTable({ notas, busca = '' }: NotasTableProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [sortField, setSortField] = useState<SortField>('dataEmissao');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  // Filtra notas por busca (empresa ou CNPJ)
+  // Filtra e ordena notas
   const notasFiltradas = useMemo(() => {
-    if (!busca.trim()) return notas;
+    let filtered = notas;
 
-    const termo = busca.toLowerCase().trim();
-    return notas.filter(
-      (nota) =>
-        nota.empresa.toLowerCase().includes(termo) ||
-        nota.cnpj.toLowerCase().includes(termo)
-    );
-  }, [notas, busca]);
+    // Filtra por busca
+    if (busca.trim()) {
+      const termo = busca.toLowerCase().trim();
+      filtered = notas.filter(
+        (nota) =>
+          nota.empresa.toLowerCase().includes(termo) ||
+          nota.cnpj.toLowerCase().includes(termo) ||
+          nota.codigo.toString().includes(termo)
+      );
+    }
+
+    // Ordena
+    filtered = [...filtered].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'codigo':
+          aValue = a.codigo;
+          bValue = b.codigo;
+          break;
+        case 'filial':
+          aValue = a.filial;
+          bValue = b.filial;
+          break;
+        case 'empresa':
+          aValue = a.empresa.toLowerCase();
+          bValue = b.empresa.toLowerCase();
+          break;
+        case 'dataEmissao':
+          aValue = new Date(a.dataEmissao).getTime();
+          bValue = new Date(b.dataEmissao).getTime();
+          break;
+        case 'dataVencimento':
+          aValue = new Date(a.dataVencimento).getTime();
+          bValue = new Date(b.dataVencimento).getTime();
+          break;
+        case 'valorTotal':
+          aValue = a.valorTotal || a.itens.reduce((sum, item) => sum + Number(item.valorTotal), 0);
+          bValue = b.valorTotal || b.itens.reduce((sum, item) => sum + Number(item.valorTotal), 0);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [notas, busca, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Alterna direção se já está ordenando por este campo
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Define novo campo e começa com ascendente
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const handleDelete = async (codigo: number) => {
     if (!confirm('Tem certeza que deseja excluir esta nota fiscal?')) {
@@ -83,23 +144,83 @@ export function NotasTable({ notas, busca = '' }: NotasTableProps) {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Código
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() => handleSort('codigo')}
+              >
+                <div className="flex items-center gap-1">
+                  Código
+                  {sortField === 'codigo' && (
+                    <span className="text-indigo-600">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Filial
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() => handleSort('filial')}
+              >
+                <div className="flex items-center gap-1">
+                  Filial
+                  {sortField === 'filial' && (
+                    <span className="text-indigo-600">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Empresa
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() => handleSort('empresa')}
+              >
+                <div className="flex items-center gap-1">
+                  Empresa
+                  {sortField === 'empresa' && (
+                    <span className="text-indigo-600">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Data Emissão
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() => handleSort('dataEmissao')}
+              >
+                <div className="flex items-center gap-1">
+                  Data Emissão
+                  {sortField === 'dataEmissao' && (
+                    <span className="text-indigo-600">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Vencimento
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() => handleSort('dataVencimento')}
+              >
+                <div className="flex items-center gap-1">
+                  Vencimento
+                  {sortField === 'dataVencimento' && (
+                    <span className="text-indigo-600">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Valor Total
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() => handleSort('valorTotal')}
+              >
+                <div className="flex items-center gap-1">
+                  Valor Total
+                  {sortField === 'valorTotal' && (
+                    <span className="text-indigo-600">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Status
